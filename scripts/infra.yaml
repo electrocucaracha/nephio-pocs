@@ -1,0 +1,49 @@
+---
+# SPDX-license-identifier: Apache-2.0
+##############################################################################
+# Copyright (c) 2024
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Apache License, Version 2.0
+# which accompanies this distribution, and is available at
+# http://www.apache.org/licenses/LICENSE-2.0
+##############################################################################
+apiVersion: config.porch.kpt.dev/v1alpha2
+kind: PackageVariantSet
+metadata:
+  name: kcd-clusters
+spec:
+  upstream:
+    repo: catalog-infra-capi
+    package: nephio-workload-cluster
+    revision: v2.0.0
+  targets:
+    - repositories:
+        - name: mgmt
+          packageNames:
+            - core01
+      template:
+        annotations:
+          approval.nephio.org/policy: initial
+        pipeline:
+          mutators:
+            - image: gcr.io/kpt-fn/set-labels:v0.2.0
+              configMap:
+                nephio.org/site-type: core
+                nephio.org/region: us-west1
+---
+apiVersion: config.porch.kpt.dev/v1alpha1
+kind: PackageVariant
+metadata:
+  name: oai-cp-operators
+spec:
+  upstream:
+    repo: oai-core-packages
+    package: oai-cp-operators
+    revision: r2
+  downstream:
+    repo: core01
+    package: oai-cp-operators
+  annotations:
+    approval.nephio.org/policy: initial
+  injectors:
+    - name: core01
