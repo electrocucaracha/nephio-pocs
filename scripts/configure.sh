@@ -37,17 +37,19 @@ function _setup_sysctl {
 
 function _deploy_kpt_pkg {
     local pkg=$1
-    local dest=${2:-${pkg##*/}}
-    local revision=${3:-main}
+    local context="kind-${2:-mgmt}"
+    local dest=${3:-${pkg##*/}}
+    local for_deployment=${4:-false}
+    local revision=${5:-main}
 
     [[ ! $dest =~ "/" ]] || mkdir -p "${dest%/*}"
-    kpt pkg get "https://github.com/nephio-project/catalog.git/${pkg}@${revision}" "$dest" --for-deployment "${4:-false}"
+    [ "$(ls -A $dest)" ] || kpt pkg get "https://github.com/nephio-project/catalog.git/${pkg}@${revision}" "$dest" --for-deployment "$for_deployment"
     newgrp docker <<BASH
     kpt fn render $dest
 BASH
-    kpt live init "$dest"
+    kpt live init "$dest" --force
     newgrp docker <<BASH
-    kpt live apply $dest
+    kpt live apply $dest --context $context
 BASH
 }
 
@@ -55,9 +57,34 @@ BASH
 _setup_sysctl "fs.inotify.max_user_watches" "524288"
 _setup_sysctl "fs.inotify.max_user_instances" "512"
 
+mkdir -p "$HOME/.kube"
+
+# Deploy Gitea cluster
+if ! sudo kind get clusters | grep -q gitea; then
+    sudo kind create cluster --name gitea --image kindest/node:v1.26.3
+    sudo cp /root/.kube/config "$HOME/.kube/config"
+    sudo chown -R "$USER" "$HOME/.kube/"
+    chmod 600 "$HOME/.kube/config"
+
+    # Wait for node readiness
+    for node in $(kubectl get node -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' --context kind-gitea); do
+        kubectl wait --for=condition=ready "node/$node" --context kind-gitea
+    done
+fi
+# Deploy Gitea components
+pushd "$(mktemp -d -t "gitea-pkg-XXX")" >/dev/null || exit
+pkgs=""
+[ "${ENABLE_METALLB:-true}" == "true" ] && pkgs+="distros/sandbox/metallb distros/sandbox/metallb-sandbox-config "
+[ "${ENABLE_GITEA:-true}" == "true" ] && pkgs+="distros/sandbox/gitea "
+
+for pkg in $pkgs; do
+    _deploy_kpt_pkg "$pkg" "gitea"
+done
+popd >/dev/null
+
 # Deploy Nephio Management cluster
-if ! sudo kind get clusters | grep -q kind; then
-    cat <<EOF | sudo kind create cluster --config=-
+if ! sudo kind get clusters | grep -q mgmt; then
+    cat <<EOF | sudo kind create cluster --name mgmt --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -67,20 +94,32 @@ nodes:
       - hostPath: /var/run/docker.sock
         containerPath: /var/run/docker.sock
 EOF
-    mkdir -p "$HOME/.kube"
     sudo cp /root/.kube/config "$HOME/.kube/config"
     sudo chown -R "$USER" "$HOME/.kube/"
     chmod 600 "$HOME/.kube/config"
+    # Wait for node readiness
+    for node in $(kubectl get node -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' --context kind-mgmt); do
+        kubectl wait --for=condition=ready "node/$node" --context kind-mgmt
+    done
 fi
+
+# Wait for MetalLB service readiness
+kubectl rollout status deployment controller -n metallb-system --context kind-gitea
+kubectl rollout status daemonsets speaker -n metallb-system --context kind-gitea
+
+# Wait for Gitea service readiness
+kubectl rollout status deployment gitea-memcached -n gitea --context kind-gitea
+
+# Create secret to connect to Gitea services
+kubectl create namespace gitea
+kubectl apply -f https://raw.githubusercontent.com/nephio-project/catalog/main/distros/sandbox/gitea/secret-git-user.yaml
 
 # Deploy Nephio Management components
 pushd "$(mktemp -d -t "mgmt-pkg-XXX")" >/dev/null || exit
 pkgs=""
-[ "${ENABLE_METALLB:-true}" == "true" ] && pkgs+="distros/sandbox/metallb distros/sandbox/metallb-sandbox-config "
-[ "${ENABLE_GITEA:-true}" == "true" ] && pkgs+="distros/sandbox/gitea "
 [ "${ENABLE_CLUSTER_API:-false}" == "true" ] && pkgs+="distros/sandbox/cert-manager infra/capi/cluster-capi infra/capi/cluster-capi-infrastructure-docker infra/capi/cluster-capi-kind-docker-templates "
 [ "${ENABLE_PORCH:-true}" == "true" ] && pkgs+="nephio/core/porch "
-[ "${ENABLE_NEPHIO_OPERATOR:-true}" == "true" ] && pkgs+="nephio/core/nephio-operator "
+[ "${ENABLE_NEPHIO_OPERATOR:-true}" == "true" ] && pkgs+="nephio/core/nephio-operator nephio/optional/resource-backend "
 [ "${ENABLE_CONFIGSYNC:-true}" == "true" ] && pkgs+="nephio/core/configsync "              # Required for access tokens to connect to gitea services
 [ "${ENABLE_NETWORK_CONFIG:-false}" == "true" ] && pkgs+="nephio/optional/network-config " # Required for workload cluster provisioning process
 
@@ -90,13 +129,13 @@ done
 popd >/dev/null
 
 # Rootsync objects configure ConfigSync to watch the specified source and apply objects from that source to the cluster.
-_deploy_kpt_pkg "nephio/optional/rootsync" "/tmp/optional/mgmt" "main" "true"
+_deploy_kpt_pkg "nephio/optional/rootsync" "mgmt" "/tmp/optional/mgmt" "true"
 
 # Manage the contents of the Management clusters
-_deploy_kpt_pkg "distros/sandbox/repository" "/tmp/repository/mgmt" "main" "true"
+_deploy_kpt_pkg "distros/sandbox/repository" "mgmt" "/tmp/repository/mgmt" "true"
 
 # Used internally during the cluster bootstrapping process
-_deploy_kpt_pkg "distros/sandbox/repository" "/tmp/repository/mgmt-staging" "main" "true"
+_deploy_kpt_pkg "distros/sandbox/repository" "mgmt" "/tmp/repository/mgmt-staging" "true"
 
 # Register repositories required for Workload Nephio cluster package operation
 for repo in "-infra-capi" "-nephio-core" "-distros-sandbox" "-nephio-optional"; do
