@@ -36,7 +36,6 @@ Vagrant.configure('2') do |config|
   config.vm.box_check_update = false
   config.vm.synced_folder './', '/vagrant'
   config.vm.network 'forwarded_port', guest: 3000, guest_ip: '172.18.0.200', host: 3000
-  config.vm.network 'forwarded_port', guest: 80, guest_ip: '172.18.0.202', host: 8080
 
   # Initial setup
   config.vm.provision 'shell', privileged: false, inline: <<-SHELL

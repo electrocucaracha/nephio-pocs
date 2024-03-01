@@ -28,7 +28,6 @@ function k8s_wait_exists {
     local kubeconfig=${3:-"$HOME/.kube/config"}
     local resource_namespace=${4:-default}
     local timeout=${5:-600}
-    timeout=600
 
     info "looking for $resource_type $resource_namespace/$resource_name using $kubeconfig"
     local found=""
