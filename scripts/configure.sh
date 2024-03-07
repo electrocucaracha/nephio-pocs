@@ -101,6 +101,9 @@ nodes:
     extraMounts:
       - hostPath: /var/run/docker.sock
         containerPath: /var/run/docker.sock
+    extraPortMappings:
+      - containerPort: 30086
+        hostPort: 16686
 EOF
     _post_cluster_creation mgmt
 fi
@@ -137,3 +140,10 @@ _deploy_kpt_pkg "distros/sandbox/repository" "mgmt" "/tmp/repository/mgmt-stagin
 
 # Register repositories required for Workload Nephio cluster package operation
 _deploy_kpt_pkgs "nephio/optional/stock-repos"
+
+if [ "${ENABLE_PORCH_DEV:-true}" == "true" ]; then
+    kubectl apply -f https://raw.githubusercontent.com/nephio-project/porch/main/deployments/tracing/deployment.yaml
+    kubectl patch deployment porch-server -n porch-system --type 'json' -p '[{"op": "add", "path": "/spec/template/spec/containers/0/env/-", "value": {"name": "OTEL", "value": "otel://jaeger-oltp:4317"}}]'
+    KUBE_EDITOR='sed -i "s|  type\: .*|  type\: NodePort|g"' kubectl edit service -n porch-system jaeger-http
+    KUBE_EDITOR='sed -i "s|  - nodePort\: .*|  - nodePort: 30086|g"' kubectl edit service -n porch-system jaeger-http
+fi
