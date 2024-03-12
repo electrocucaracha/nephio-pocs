@@ -18,6 +18,7 @@ source _utils.sh
 
 export DEBUG=true
 
+sudo rm -r /tmp/*
 for step in install configure; do
     info "Running $step process"
     bash "./$step.sh"
