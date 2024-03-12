@@ -43,7 +43,7 @@ function _deploy_kpt_pkg {
     local revision=${5:-main}
 
     [[ ! $dest =~ "/" ]] || mkdir -p "${dest%/*}"
-    [ "$(ls -A $dest)" ] || kpt pkg get "https://github.com/nephio-project/catalog.git/${pkg}@${revision}" "$dest" --for-deployment "$for_deployment"
+    [ "$(ls -A "$dest")" ] || kpt pkg get "https://github.com/nephio-project/catalog.git/${pkg}@${revision}" "$dest" --for-deployment "$for_deployment"
     newgrp docker <<BASH
     kpt fn render $dest
 BASH
