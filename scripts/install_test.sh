@@ -11,16 +11,20 @@
 set -o pipefail
 set -o errexit
 set -o nounset
-set -o xtrace
+[[ ${DEBUG:-false} != "true" ]] || set -o xtrace
 
 # shellcheck source=./scripts/_utils.sh
 source _utils.sh
 
-export DEBUG=true
+function _assert_cmd_exists {
+    local cmd="$1"
+    local error_msg="${2:-"$cmd command doesn't exist"}"
 
-sudo rm -r /tmp/*
-for step in install configure; do
-    info "Running $step process"
-    bash "./$step.sh"
-    [[ ${ENABLE_FUNC_TEST:-false} != "true" && -f "./${step}_test.sh" ]] || bash "./${step}_test.sh"
+    [[ ${DEBUG:-false} != "true" ]] || debug "Command $cmd assertion validation"
+    command -v "$cmd" >/dev/null || error "$error_msg"
+}
+
+info "Assert command requirements"
+for cmd in docker kubectl kpt kind; do
+    _assert_cmd_exists "$cmd"
 done

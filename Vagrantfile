@@ -53,6 +53,7 @@ Vagrant.configure('2') do |config|
   config.vm.provision 'shell', privileged: false do |sh|
     sh.env = {
       DEBUG: ENV.fetch('DEBUG', true),
+      ENABLE_FUNC_TEST: ENV.fetch('ENABLE_FUNC_TEST', false),
       ENABLE_CLUSTER_API: 'true',
       ENABLE_NETWORK_CONFIG: 'true'
     }
