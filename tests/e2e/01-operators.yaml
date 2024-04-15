@@ -1,4 +1,4 @@
-#!/bin/bash
+---
 # SPDX-license-identifier: Apache-2.0
 ##############################################################################
 # Copyright (c) 2024
@@ -7,17 +7,19 @@
 # which accompanies this distribution, and is available at
 # http://www.apache.org/licenses/LICENSE-2.0
 ##############################################################################
-
-set -o pipefail
-set -o errexit
-set -o nounset
-
-# shellcheck source=./scripts/_utils.sh
-source _utils.sh
-
-sudo rm -r /tmp/*
-for step in install configure; do
-    info "Running $step process"
-    bash "./$step.sh"
-    [[ ${ENABLE_FUNC_TEST:-false} != "true" && -f "./${step}_test.sh" ]] || bash "./${step}_test.sh"
-done
+apiVersion: config.porch.kpt.dev/v1alpha1
+kind: PackageVariant
+metadata:
+  name: oai-cp-operators
+spec:
+  upstream:
+    repo: oai-core-packages
+    package: oai-cp-operators
+    revision: r2
+  downstream:
+    repo: core01
+    package: oai-cp-operators
+  annotations:
+    approval.nephio.org/policy: initial
+  injectors:
+    - name: core01

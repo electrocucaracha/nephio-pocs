@@ -49,3 +49,11 @@ jobs:
           DEBUG: true
           ENABLE_FUNC_TEST: true
         run: ./main.sh
+      - name: Install KUTTL
+        env:
+          KUTTL_VERSION: 0.16.0
+        run: |
+          curl -fsSL -o /usr/local/bin/kubectl-kuttl "https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_$(uname | tr '[:upper:]' '[:lower:]')_$(uname -m)"
+          chmod +x /usr/local/bin/kubectl-kuttl
+      - name: Run integration tests
+        run: kubectl-kuttl test

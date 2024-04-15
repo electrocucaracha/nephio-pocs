@@ -1,4 +1,4 @@
-#!/bin/bash
+---
 # SPDX-license-identifier: Apache-2.0
 ##############################################################################
 # Copyright (c) 2024
@@ -7,17 +7,13 @@
 # which accompanies this distribution, and is available at
 # http://www.apache.org/licenses/LICENSE-2.0
 ##############################################################################
-
-set -o pipefail
-set -o errexit
-set -o nounset
-
-# shellcheck source=./scripts/_utils.sh
-source _utils.sh
-
-sudo rm -r /tmp/*
-for step in install configure; do
-    info "Running $step process"
-    bash "./$step.sh"
-    [[ ${ENABLE_FUNC_TEST:-false} != "true" && -f "./${step}_test.sh" ]] || bash "./${step}_test.sh"
-done
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+name: e2e
+testDirs:
+  - tests/
+timeout: 600
+parallel: 1
+namespace: default
+commands:
+  - command: kubectl apply -f https://raw.githubusercontent.com/kudobuilder/kuttl/main/crds/testassert_crd.yaml
