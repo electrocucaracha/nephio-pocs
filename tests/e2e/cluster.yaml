@@ -30,20 +30,3 @@ spec:
               configMap:
                 nephio.org/site-type: core
                 nephio.org/region: us-west1
----
-apiVersion: config.porch.kpt.dev/v1alpha1
-kind: PackageVariant
-metadata:
-  name: oai-cp-operators
-spec:
-  upstream:
-    repo: oai-core-packages
-    package: oai-cp-operators
-    revision: r2
-  downstream:
-    repo: core01
-    package: oai-cp-operators
-  annotations:
-    approval.nephio.org/policy: initial
-  injectors:
-    - name: core01

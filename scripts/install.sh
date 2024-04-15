@@ -21,7 +21,7 @@ source _utils.sh
 # shellcheck source=./scripts/defaults.env
 source defaults.env
 
-export PKG_KREW_PLUGINS_LIST=" "
+export PKG_KREW_PLUGINS_LIST="kuttl"
 export PKG_CNI_PLUGINS_FOLDER="/opt/cni/bin/"
 
 # Install dependencies
