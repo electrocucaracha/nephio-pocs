@@ -12,4 +12,6 @@ The goal of this project is to provision a [Nephio Management cluster][1] for te
 * Software Package hosting URL - <http://localhost:3000/>
 <!-- markdown-link-check-enable -->
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?repo=electrocucaracha/nephio-pocs)
+
 [1]: https://nephio.org/
