@@ -44,6 +44,7 @@ function _deploy_kpt_pkg {
 
     [[ ! $dest =~ "/" ]] || mkdir -p "${dest%/*}"
     [ "$(ls -A "$dest")" ] || kpt pkg get "https://github.com/nephio-project/catalog.git/${pkg}@${revision}" "$dest" --for-deployment "$for_deployment"
+    ! grep -qr "http://172.18.0.200:3000" "$dest" || find "$dest" -type f -exec sed -i "s|http://172.18.0.200:3000|http://$(kubectl get services gitea -n gitea --context kind-gitea -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):3000|g" {} \;
     newgrp docker <<BASH
     kpt fn render $dest
 BASH
@@ -71,6 +72,8 @@ function _post_cluster_creation {
     sudo chown -R "$USER" "$HOME/.kube/"
     chmod 600 "$HOME/.kube/config"
 
+    kubectl label node kind-control-plane node.kubernetes.io/exclude-from-external-load-balancers- || true
+
     # Wait for node readiness
     for node in $(kubectl get node -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' --context "kind-$cluster"); do
         kubectl wait --for=condition=ready "node/$node" --context "kind-$cluster"
@@ -83,12 +86,16 @@ _setup_sysctl "fs.inotify.max_user_instances" "512"
 
 mkdir -p "$HOME/.kube"
 
+pushd "$(git rev-parse --show-toplevel)" >/dev/null
+sudo docker compose up --detach
+popd >/dev/null
+
 # Deploy Gitea cluster
 if ! sudo kind get clusters | grep -q gitea; then
     sudo kind create cluster --name gitea --image kindest/node:v1.26.3
     _post_cluster_creation gitea
 fi
-_deploy_kpt_pkgs "distros/sandbox/metallb distros/sandbox/metallb-sandbox-config distros/sandbox/gitea" "gitea"
+_deploy_kpt_pkgs "distros/sandbox/gitea" "gitea"
 
 # Deploy Nephio Management + Cluster API cluster
 if ! sudo kind get clusters | grep -q mgmt; then
@@ -107,10 +114,6 @@ nodes:
 EOF
     _post_cluster_creation mgmt
 fi
-
-# Wait for MetalLB service readiness
-kubectl rollout status deployment controller -n metallb-system --context kind-gitea
-kubectl rollout status daemonsets speaker -n metallb-system --context kind-gitea
 
 # Wait for Gitea service readiness
 kubectl rollout status deployment gitea-memcached -n gitea --context kind-gitea

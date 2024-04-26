@@ -21,9 +21,6 @@ source _utils.sh
 # shellcheck source=./scripts/defaults.env
 source defaults.env
 
-export PKG_KREW_PLUGINS_LIST="kuttl"
-export PKG_CNI_PLUGINS_FOLDER="/opt/cni/bin/"
-
 # Install dependencies
 # NOTE: Shorten link -> https://github.com/electrocucaracha/pkg-mgr_scripts
 curl -fsSL http://bit.ly/install_pkg | PKG_COMMANDS_LIST="docker,kubectl,kind" PKG="cni-plugins" bash
