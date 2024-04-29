@@ -8,9 +8,9 @@
 # http://www.apache.org/licenses/LICENSE-2.0
 ##############################################################################
 apiVersion: kuttl.dev/v1beta1
-kind: TestSuite
-name: e2e
-testDirs:
-  - tests/
-timeout: 1200
-namespace: default
+kind: TestStep
+kubeconfig: /tmp/core01-kubeconfig
+assert:
+  - check-workload-services.yaml
+  - check-workload-deployments.yaml
+  - check-workload-daemonsets.yaml

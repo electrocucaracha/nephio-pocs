@@ -150,3 +150,6 @@ if [ "${ENABLE_PORCH_DEV:-true}" == "true" ]; then
     KUBE_EDITOR='sed -i "s|  type\: .*|  type\: NodePort|g"' kubectl edit service -n porch-system jaeger-http
     KUBE_EDITOR='sed -i "s|  - nodePort\: .*|  - nodePort: 30086|g"' kubectl edit service -n porch-system jaeger-http
 fi
+
+# NOTE: Workaround for passing the End-to-End testing
+cp ~/.kube/config /tmp/core01-kubeconfig

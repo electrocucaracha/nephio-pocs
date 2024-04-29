@@ -24,7 +24,7 @@ function _assert_inotify_maxs {
     local var="$1"
     local val="$2"
 
-    assert_contains "$(sudo sysctl sysctl --all)" "fs.inotify.max_user_$var"
+    assert_contains "$(sudo sysctl sysctl --all | grep 'fs.inotify')" "fs.inotify.max_user_$var"
     assert_are_equal "$(sudo sysctl sysctl --values "fs.inotify.max_user_$var" 2>/dev/null)" "$val"
 }
 
