@@ -152,4 +152,6 @@ if [ "${ENABLE_PORCH_DEV:-true}" == "true" ]; then
 fi
 
 # NOTE: Workaround for passing the End-to-End testing
-cp ~/.kube/config /tmp/core01-kubeconfig
+for cluster in gitea mgmt core01; do
+    cp ~/.kube/config "/tmp/$cluster-kubeconfig"
+done
