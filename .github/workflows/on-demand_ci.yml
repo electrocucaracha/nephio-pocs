@@ -63,7 +63,7 @@ jobs:
           kind export logs --name mgmt -v 4 ./_artifacts/logs
       - name: Upload mgmt cluster logs
         if: always()
-        uses: actions/upload-artifact@v4.3.3
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: kind-mgmt-logs-${{ github.run_id }}
           path: ./_artifacts/logs
